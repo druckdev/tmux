@@ -36,7 +36,7 @@
 static u_int	layout_resize_check(struct window *, struct layout_cell *,
 		    enum layout_type);
 static int	layout_resize_pane_grow(struct window *, struct layout_cell *,
-		    enum layout_type, int, int);
+		    enum layout_type, int, int, int);
 static int	layout_resize_pane_shrink(struct window *, struct layout_cell *,
 		    enum layout_type, int);
 static u_int	layout_new_pane_size(struct window *, u_int,
@@ -632,7 +632,7 @@ layout_resize_pane(struct window_pane *wp, enum layout_type type, int change,
 /* Helper function to grow pane. */
 static int
 layout_resize_pane_grow(struct window *w, struct layout_cell *lc,
-    enum layout_type type, int needed, int opposite)
+    enum layout_type type, int to_tail, int needed, int opposite)
 {
 	struct layout_cell	*lcadd, *lcremove;
 	u_int			 size = 0;
@@ -640,23 +640,39 @@ layout_resize_pane_grow(struct window *w, struct layout_cell *lc,
 	/* Growing. Always add to the current cell. */
 	lcadd = lc;
 
-	/* Look towards the tail for a suitable cell for reduction. */
-	lcremove = TAILQ_NEXT(lc, entry);
+	if (to_tail)
+		/* Look towards the tail for a suitable cell for reduction. */
+		lcremove = TAILQ_NEXT(lc, entry);
+	else
+		/* Look towards the head for a suitable cell for reduction. */
+		lcremove = TAILQ_PREV(lc, layout_cells, entry);
+
 	while (lcremove != NULL) {
 		size = layout_resize_check(w, lcremove, type);
 		if (size > 0)
 			break;
-		lcremove = TAILQ_NEXT(lcremove, entry);
+
+		if (to_tail)
+			lcremove = TAILQ_NEXT(lcremove, entry);
+		else
+			lcremove = TAILQ_PREV(lcremove, layout_cells, entry);
 	}
 
 	/* If none found, look towards the head. */
 	if (opposite && lcremove == NULL) {
-		lcremove = TAILQ_PREV(lc, layout_cells, entry);
+		if (to_tail)
+			lcremove = TAILQ_PREV(lc, layout_cells, entry);
+		else
+			lcremove = TAILQ_NEXT(lc, entry);
+
 		while (lcremove != NULL) {
 			size = layout_resize_check(w, lcremove, type);
 			if (size > 0)
 				break;
-			lcremove = TAILQ_PREV(lcremove, layout_cells, entry);
+			if (to_tail)
+				lcremove = TAILQ_PREV(lcremove, layout_cells, entry);
+			else
+				lcremove = TAILQ_NEXT(lcremove, entry);
 		}
 	}
 	if (lcremove == NULL)

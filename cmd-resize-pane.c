@@ -98,7 +98,7 @@ cmd_resize_pane_exec(struct cmd *self, struct cmdq_item *item)
 	if (args_count(args) == 0)
 		adjust = 1;
 	else {
-		adjust = strtonum(args_string(args, 0), 1, INT_MAX, &errstr);
+		adjust = strtonum(args_string(args, 0), INT_MIN, INT_MAX, &errstr);
 		if (errstr != NULL) {
 			cmdq_error(item, "adjustment %s", errstr);
 			return (CMD_RETURN_ERROR);
@@ -135,14 +135,18 @@ cmd_resize_pane_exec(struct cmd *self, struct cmdq_item *item)
 		layout_resize_pane_to(wp, LAYOUT_TOPBOTTOM, y);
 	}
 
-	if (args_has(args, 'L'))
-		layout_resize_pane(wp, LAYOUT_LEFTRIGHT, -adjust, 1);
-	else if (args_has(args, 'R'))
+	// TODO: Support signed adjust
+	if (args_has(args, 'L')) {
+			layout_resize_pane(wp, LAYOUT_LEFTRIGHT, adjust >= 0, adjust, 1);
+		else if (adjust < 0)
+			layout_resize_pane(wp, LAYOUT_LEFTRIGHT, adjadjust, 1);
+	} else if (args_has(args, 'R')) {
 		layout_resize_pane(wp, LAYOUT_LEFTRIGHT, adjust, 1);
-	else if (args_has(args, 'U'))
+	} else if (args_has(args, 'U')) {
 		layout_resize_pane(wp, LAYOUT_TOPBOTTOM, -adjust, 1);
-	else if (args_has(args, 'D'))
+	} else if (args_has(args, 'D')) {
 		layout_resize_pane(wp, LAYOUT_TOPBOTTOM, adjust, 1);
+	}
 	server_redraw_window(wl->window);
 
 	return (CMD_RETURN_NORMAL);
