@@ -1805,7 +1805,9 @@ window_copy_cmd_other_end(struct window_copy_cmd_state *cs)
 	u_int				 np = wme->prefix;
 	struct window_copy_mode_data	*data = wme->data;
 
-	data->selflag = SEL_CHAR;
+	// This resets the selection type when pressing o
+	// See: https://github.com/tmux/tmux/issues/2117
+	// data->selflag = SEL_CHAR;
 	if ((np % 2) != 0)
 		window_copy_other_end(wme);
 	return (WINDOW_COPY_CMD_NOTHING);
